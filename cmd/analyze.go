@@ -1,27 +1,18 @@
 package main
 
 import (
-  "encoding/json"
   "fmt"
-  "io/ioutil"
   "log"
-  "os"
   "sort"
   "strconv"
   "strings"
+
+  sa "github.com/korlando/slackanalytics"
 )
 
 const (
   path = "../data"
 )
-
-type Message struct {
-  User      string `json:"user"`
-  Type      string `json:"type"`
-  SubType   string `json:"subtype"`
-  Text      string `json:"text"`
-  TimeStamp string `json:"ts"`
-}
 
 type WordMap struct {
   TotalWords uint
@@ -48,51 +39,26 @@ func (s sortByCount) Swap(i, j int) {
 }
 
 func main() {
-  fileInfos, err := ioutil.ReadDir(path)
+  messages, err := sa.ReadAllMessages(path)
   if err != nil {
     log.Fatal(err)
   }
   wm := WordMap{0, make(map[string]uint)}
-  for _, f := range fileInfos {
-    // only channels are dirs
-    if !f.IsDir() {
+  for _, m := range messages {
+    if m.Text == "" {
       continue
     }
-    // look at each json file in channel (1 per day)
-    channelPath := path + "/" + f.Name()
-    jsonFiles, err := ioutil.ReadDir(channelPath)
-    if err != nil {
-      log.Fatal(err)
-    }
-    for _, j := range jsonFiles {
-      file, err := os.Open(channelPath + "/" + j.Name())
-      if err != nil {
-        log.Fatal(err)
+    words := strings.Fields(m.Text)
+    for _, w := range words {
+      if w == "" {
+        continue
       }
-      defer file.Close()
-      jsonBytes, err := ioutil.ReadAll(file)
-      if err != nil {
-        log.Fatal(err)
-      }
-      var messages []Message
-      json.Unmarshal(jsonBytes, &messages)
-      for _, m := range messages {
-        if m.Text == "" {
-          continue
-        }
-        words := strings.Fields(m.Text)
-        for _, w := range words {
-          if w == "" {
-            continue
-          }
-          wm.TotalWords += 1
-          count, ok := wm.Words[w]
-          if !ok {
-            wm.Words[w] = 1
-          } else {
-            wm.Words[w] = count + 1
-          }
-        }
+      wm.TotalWords += 1
+      count, ok := wm.Words[w]
+      if !ok {
+        wm.Words[w] = 1
+      } else {
+        wm.Words[w] = count + 1
       }
     }
   }
