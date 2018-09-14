@@ -7,7 +7,7 @@ import (
 
 type WordStats struct {
   TotalWords   int
-  AvgLength    int
+  AvgLength    float64
   WordCountMap map[string]int
 }
 
@@ -34,6 +34,7 @@ func (s sortByCount) Swap(i, j int) {
 // the total # of words, avg word length, and frequency counts.
 func GetWordStats(messages []Message) (ws WordStats) {
   ws = WordStats{0, 0, make(map[string]int)}
+  totalLength := 0
   for _, m := range messages {
     if m.Text == "" {
       continue
@@ -44,6 +45,7 @@ func GetWordStats(messages []Message) (ws WordStats) {
         continue
       }
       ws.TotalWords += 1
+      totalLength += len(w)
       count, ok := ws.WordCountMap[w]
       if !ok {
         ws.WordCountMap[w] = 1
@@ -52,6 +54,7 @@ func GetWordStats(messages []Message) (ws WordStats) {
       }
     }
   }
+  ws.AvgLength = float64(totalLength) / float64(ws.TotalWords)
   return
 }
 

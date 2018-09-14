@@ -47,6 +47,7 @@ func main() {
   ws := sa.GetWordStats(messages)
   wordCounts := sa.GetSortedWords(ws)
   fmt.Println("Total words: " + strconv.Itoa(ws.TotalWords))
+  fmt.Println("Avg word length: " + strconv.FormatFloat(ws.AvgLength, 'f', 3, 64))
   i := 0
   j := 0
   for j < 20 {
