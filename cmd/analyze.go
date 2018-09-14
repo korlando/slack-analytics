@@ -1,6 +1,7 @@
 package main
 
 import (
+  "flag"
   "fmt"
   "log"
   "sort"
@@ -11,12 +12,20 @@ import (
 )
 
 const (
-  path = "../data"
+  dataPath = "../data"
 )
 
-type WordMap struct {
-  TotalWords uint
-  Words      map[string]uint
+var (
+  commonWords = []string{"i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them", "what", "who", "whom", "this", "that", "these", "those", "the", "to", "a", "is", "of", "and", "in", "on", "for", "not", "like", "have", "my"}
+)
+
+type Options struct {
+  path string
+}
+
+type WordStat struct {
+  TotalWords   uint
+  WordCountMap map[string]uint
 }
 
 type WordCount struct {
@@ -38,12 +47,29 @@ func (s sortByCount) Swap(i, j int) {
   s[i], s[j] = s[j], s[i]
 }
 
+func parseFlags() (opt Options) {
+  var p, path string
+  pDefault := dataPath
+  pDesc := "Path to the data folder."
+  flag.StringVar(&p, "p", pDefault, pDesc)
+  flag.StringVar(&path, "path", pDefault, pDesc)
+  flag.Parse()
+  opt = Options{
+    path: p,
+  }
+  if path != pDefault {
+    opt.path = path
+  }
+  return
+}
+
 func main() {
-  messages, err := sa.ReadAllMessages(path)
+  opt := parseFlags()
+  messages, err := sa.ReadAllMessages(opt.path)
   if err != nil {
     log.Fatal(err)
   }
-  wm := WordMap{0, make(map[string]uint)}
+  ws := WordStat{0, make(map[string]uint)}
   for _, m := range messages {
     if m.Text == "" {
       continue
@@ -53,25 +79,40 @@ func main() {
       if w == "" {
         continue
       }
-      wm.TotalWords += 1
-      count, ok := wm.Words[w]
+      ws.TotalWords += 1
+      count, ok := ws.WordCountMap[w]
       if !ok {
-        wm.Words[w] = 1
+        ws.WordCountMap[w] = 1
       } else {
-        wm.Words[w] = count + 1
+        ws.WordCountMap[w] = count + 1
       }
     }
   }
-  wordCounts := make([]WordCount, len(wm.Words))
+  wordCounts := make([]WordCount, len(ws.WordCountMap))
   i := 0
-  for word, count := range wm.Words {
+  for word, count := range ws.WordCountMap {
     wordCounts[i] = WordCount{word, count}
     i += 1
   }
   sort.Sort(sortByCount(wordCounts))
-  fmt.Println("Total words: " + strconv.Itoa(int(wm.TotalWords)))
-  for i := 0; i < 20; i++ {
+  fmt.Println("Total words: " + strconv.Itoa(int(ws.TotalWords)))
+  i = 0
+  j := 0
+  for j < 20 {
     wc := wordCounts[i]
-    fmt.Println(wc.Word + " " + strconv.Itoa(int(wc.Count)))
+    i += 1
+    w := wc.Word
+    isCommon := false
+    for _, c := range commonWords {
+      if c == strings.ToLower(w) {
+        isCommon = true
+        continue
+      }
+    }
+    if isCommon {
+      continue
+    }
+    fmt.Println(w + " " + strconv.Itoa(int(wc.Count)))
+    j += 1
   }
 }
