@@ -4,7 +4,6 @@ import (
   "flag"
   "fmt"
   "log"
-  "sort"
   "strconv"
   "strings"
 
@@ -21,30 +20,6 @@ var (
 
 type Options struct {
   path string
-}
-
-type WordStat struct {
-  TotalWords   uint
-  WordCountMap map[string]uint
-}
-
-type WordCount struct {
-  Word  string
-  Count uint
-}
-
-type sortByCount []WordCount
-
-func (s sortByCount) Len() int {
-  return len(s)
-}
-
-func (s sortByCount) Less(i, j int) bool {
-  return s[i].Count > s[j].Count
-}
-
-func (s sortByCount) Swap(i, j int) {
-  s[i], s[j] = s[j], s[i]
 }
 
 func parseFlags() (opt Options) {
@@ -69,34 +44,10 @@ func main() {
   if err != nil {
     log.Fatal(err)
   }
-  ws := WordStat{0, make(map[string]uint)}
-  for _, m := range messages {
-    if m.Text == "" {
-      continue
-    }
-    words := strings.Fields(m.Text)
-    for _, w := range words {
-      if w == "" {
-        continue
-      }
-      ws.TotalWords += 1
-      count, ok := ws.WordCountMap[w]
-      if !ok {
-        ws.WordCountMap[w] = 1
-      } else {
-        ws.WordCountMap[w] = count + 1
-      }
-    }
-  }
-  wordCounts := make([]WordCount, len(ws.WordCountMap))
+  ws := sa.GetWordStats(messages)
+  wordCounts := sa.GetSortedWords(ws)
+  fmt.Println("Total words: " + strconv.Itoa(ws.TotalWords))
   i := 0
-  for word, count := range ws.WordCountMap {
-    wordCounts[i] = WordCount{word, count}
-    i += 1
-  }
-  sort.Sort(sortByCount(wordCounts))
-  fmt.Println("Total words: " + strconv.Itoa(int(ws.TotalWords)))
-  i = 0
   j := 0
   for j < 20 {
     wc := wordCounts[i]
@@ -112,7 +63,7 @@ func main() {
     if isCommon {
       continue
     }
-    fmt.Println(w + " " + strconv.Itoa(int(wc.Count)))
+    fmt.Println(w + " " + strconv.Itoa(wc.Count))
     j += 1
   }
 }
