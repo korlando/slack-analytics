@@ -14,6 +14,8 @@ type Message struct {
   TimeStamp string `json:"ts"`
 }
 
+// ReadAllMessages takes in a path to the data folder and returns
+// all messages from all channels in no particular order
 func ReadAllMessages(dataPath string) (messages []Message, err error) {
   fileInfos, err := ioutil.ReadDir(dataPath)
   if err != nil {
@@ -34,6 +36,8 @@ func ReadAllMessages(dataPath string) (messages []Message, err error) {
   return
 }
 
+// ReadChannelMessages takes in a path to a channel folder
+// and returns all messages from that channel
 func ReadChannelMessages(channelPath string) (messages []Message, err error) {
   jsonFiles, err := ioutil.ReadDir(channelPath)
   if err != nil {
@@ -56,6 +60,18 @@ func ReadChannelMessages(channelPath string) (messages []Message, err error) {
       continue
     }
     messages = append(messages, dayMessages...)
+  }
+  return
+}
+
+// FilterMessagesByUser takes in a slice of messages and user ID
+// and returns a filtered slice of those messages by the user
+func FilterMessagesByUser(messages []Message, userId string) (filteredMessages []Message) {
+  filteredMessages = []Message{}
+  for _, m := range messages {
+    if m.User == userId {
+      filteredMessages = append(filteredMessages, m)
+    }
   }
   return
 }

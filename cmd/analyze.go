@@ -4,18 +4,12 @@ import (
   "flag"
   "fmt"
   "log"
-  "strconv"
-  "strings"
 
   sa "github.com/korlando/slackanalytics"
 )
 
 const (
   dataPath = "../data"
-)
-
-var (
-  commonWords = []string{"i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them", "what", "who", "whom", "this", "that", "these", "those", "the", "to", "a", "is", "of", "and", "in", "on", "for", "not", "like", "have", "my"}
 )
 
 type Options struct {
@@ -44,27 +38,23 @@ func main() {
   if err != nil {
     log.Fatal(err)
   }
-  ws := sa.GetWordStats(messages)
-  wordCounts := sa.GetSortedWords(ws)
-  fmt.Println("Total words: " + strconv.Itoa(ws.TotalWords))
-  fmt.Println("Avg word length: " + strconv.FormatFloat(ws.AvgLength, 'f', 3, 64))
-  i := 0
-  j := 0
-  for j < 20 {
-    wc := wordCounts[i]
-    i += 1
-    w := wc.Word
-    isCommon := false
-    for _, c := range commonWords {
-      if c == strings.ToLower(w) {
-        isCommon = true
-        continue
-      }
-    }
-    if isCommon {
+  sa.GetAndPrintStats(messages)
+  users, err := sa.GetUsers(opt.path)
+  if err != nil {
+    log.Fatal(err)
+  }
+  // get word stats for individual users
+  for _, u := range users {
+    userMessages := sa.FilterMessagesByUser(messages, u.Id)
+    if len(userMessages) == 0 {
       continue
     }
-    fmt.Println(w + " " + strconv.Itoa(wc.Count))
-    j += 1
+    name := u.Profile.RealName
+    if u.Profile.DisplayName != "" {
+      name = u.Profile.DisplayName
+    }
+    fmt.Println(name + "\n")
+    sa.GetAndPrintStats(userMessages)
+    fmt.Println()
   }
 }
