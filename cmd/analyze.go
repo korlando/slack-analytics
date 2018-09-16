@@ -39,12 +39,16 @@ func main() {
     log.Fatal(err)
   }
   sa.GetAndPrintStats(messages)
+  fmt.Println()
   users, err := sa.GetUsers(opt.path)
   if err != nil {
     log.Fatal(err)
   }
   // get word stats for individual users
   for _, u := range users {
+    if u.Deleted {
+      continue
+    }
     userMessages := sa.FilterMessagesByUser(messages, u.Id)
     if len(userMessages) == 0 {
       continue

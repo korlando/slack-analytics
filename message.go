@@ -4,6 +4,11 @@ import (
   "encoding/json"
   "io/ioutil"
   "os"
+  "strings"
+)
+
+var (
+  symbols = []rune{'.', ',', '"', '\'', '(', ')', '!', '?', '$', ';', ':'}
 )
 
 type Message struct {
@@ -74,4 +79,49 @@ func FilterMessagesByUser(messages []Message, userId string) (filteredMessages [
     }
   }
   return
+}
+
+func MessageToWords(m Message, trimSymbols, lower bool) (words []string) {
+  words = strings.Fields(m.Text)
+  if !trimSymbols {
+    if lower {
+      for i, w := range words {
+        words[i] = strings.ToLower(w)
+      }
+    }
+    return
+  }
+  // trim symbols
+  for i, w := range words {
+    start := 0
+    end := len(w)
+    for j, b := range w {
+      if !isSymbol(b) {
+        start = j
+        break
+      } 
+    }
+    for j := len(w) - 1; j >= 0; j-- {
+      if !isSymbol(rune(w[j])) {
+        end = j + 1
+        break
+      }
+    }
+    trimmed := string(w[start:end])
+    if lower {
+      words[i] = strings.ToLower(trimmed)
+    } else {
+      words[i] = trimmed
+    }
+  }
+  return
+}
+
+func isSymbol(r rune) bool {
+  for _, s := range symbols {
+    if s == r {
+      return true
+    }
+  }
+  return false
 }
