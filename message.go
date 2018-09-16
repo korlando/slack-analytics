@@ -54,8 +54,8 @@ func ReadChannelMessages(channelPath string) (messages []Message, err error) {
     if err != nil {
       continue
     }
-    defer file.Close()
     jsonBytes, err := ioutil.ReadAll(file)
+    file.Close()
     if err != nil {
       continue
     }

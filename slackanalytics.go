@@ -7,10 +7,6 @@ import (
   "strings"
 )
 
-var (
-  commonWords = []string{"i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them", "what", "who", "whom", "this", "that", "these", "those", "the", "to", "a", "is", "of", "and", "in", "on", "for", "not", "like", "have", "my", "with", "your", "if", "was", "are"}
-)
-
 type WordStats struct {
   TotalWords     int
   AvgLength      float64
@@ -98,7 +94,7 @@ func GetTopWords(wordCounts []WordCount, amount int, includeCommon bool) (topWor
     w := wc.Word
     isCommon := false
     if !includeCommon {
-      for _, c := range commonWords {
+      for _, c := range CommonWords {
         if c == strings.ToLower(w) {
           isCommon = true
           continue
@@ -130,6 +126,8 @@ func GetClout(words []string) (clout int) {
   return
 }
 
+// GetTone loosely calculates the tone of a slice
+// of words (+1 for pos emo and -1 for neg emo)
 func GetTone(words []string) (tone int) {
   for _, w := range words {
     wLower := strings.ToLower(w)
@@ -144,6 +142,8 @@ func GetTone(words []string) (tone int) {
   return
 }
 
+// GetAndPrintStats takes in a slice of messages
+// and prints some stats about them
 func GetAndPrintStats(messages []Message) {
   ws := GetWordStats(messages)
   wordCounts := GetSortedWords(ws)
@@ -157,6 +157,8 @@ func GetAndPrintStats(messages []Message) {
   }
 }
 
+// inList determines whether a word
+// is contained in a slice of words
 func inList(word string, words []string) bool {
   for _, w := range words {
     if w == word {
@@ -166,6 +168,8 @@ func inList(word string, words []string) bool {
   return false
 }
 
+// floatStr converts a float64 to a string
+// with decimals worth of precision
 func floatStr(f float64, decimals int) string {
   return strconv.FormatFloat(f, 'f', decimals, 64)
 }
