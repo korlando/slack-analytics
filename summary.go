@@ -1,7 +1,9 @@
 package slackanalytics
 
 var (
-  IWords = []string{"i", "me", "mine", "my", "i'm"}
+  IWords = []string{"i", "me", "mine", "my", "i'm", "im", "ikr"}
   YouWords = []string{"you", "your", "thou", "you're", "u"}
   WeWords = []string{"we", "us", "our", "we're"}
+  PosEmo = []string{"happiness", "enlighten", "better", "enthusiasm", "pride", "joyful", "compassion", "dearly", "forgiving", "kindness", "bravery", "closure", "thrill", "honestly", "triumph", "bond", "honesty", "alive", "concern", "reunite", "joy", "surprise", "forgiveness", "assurance", "sympathize", "understanding", "reason", "rejoice", "care", "faith", "great", "empathy", "certainty", "keep", "trustworthy", "affection", "cherish", "emotion", "love", "family", "trusting", "respect", "trust", "gratitude", "confidence", "adoration", "friend", "happy", "overjoyed", "determination", "reassurance", "glad", "loved", "admiration", "wish", "accomplishment", "optimism", "excitement", "convince", "hope", "freedom", "feeling", "eagerness", "willingness", "sincere", "sincerity", "honest", "genuine", "comfort", "elation", "thrilled", "loyalty", "curiosity", "unconditionally", "proud"}
+  NegEmo = []string{"violent", "kill", "hell", "hate", "dieing", "death", "thinking", "hated", "crying", "surprised", "hurting", "worse", "beat", "stop", "crushed", "break", "worst", "trouble", "disappointed", "killed", "lost", "cry", "worried", "worst_part",  "bad", "stupid", "either", "die", "mean", "insane", "fucking", "scared", "hard", "dead", "beaten", "horrible", "monster", "weak", "loose", "threatened", "punch", "killing", "blame", "reason", "so_much_pain", "hurts", "losing", "wanted", "pissed", "care", "scary", "accident", "fault", "guilty", "terrible", "swear", "last_straw", "heartbroken", "scare", "seeing", "drunk", "terrified", "freaked", "raped", "frightened", "poor_girl", "lose", "angry", "fight", "poor_guy", "hurt", "ashamed", "depressed", "unthinkable", "tortured", "crazy", "confused", "sad", "hit", "alone", "lie", "afraid", "dying", "shocked", "angered", "sick", "badly", "pain", "react", "wrong", "mad", "upset", "fighting", "furious"}
 )

@@ -81,6 +81,8 @@ func FilterMessagesByUser(messages []Message, userId string) (filteredMessages [
   return
 }
 
+// MessageToWords takes in a message and returns a slice of words (strings);
+// optionally trims symbols from individual words and converts to lowercase
 func MessageToWords(m Message, trimSymbols, lower bool) (words []string) {
   words = strings.Fields(m.Text)
   if !trimSymbols {
@@ -117,6 +119,8 @@ func MessageToWords(m Message, trimSymbols, lower bool) (words []string) {
   return
 }
 
+// isSymbol decides whether a
+// rune is in the symbol list
 func isSymbol(r rune) bool {
   for _, s := range symbols {
     if s == r {

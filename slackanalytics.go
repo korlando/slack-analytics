@@ -15,6 +15,7 @@ type WordStats struct {
   TotalWords     int
   AvgLength      float64
   AvgCloutPerMsg float64
+  AvgTonePerMsg  float64
   WordCountMap   map[string]int
 }
 
@@ -40,15 +41,17 @@ func (s sortByCount) Swap(i, j int) {
 // GetWordStats takes in a slice of messages and calculates
 // the total # of words, avg word length, and frequency counts.
 func GetWordStats(messages []Message) (ws WordStats) {
-  ws = WordStats{0, 0, 0, make(map[string]int)}
+  ws = WordStats{0, 0, 0, 0, make(map[string]int)}
   totalLength := 0
   totalClout := 0
+  totalTone := 0
   for _, m := range messages {
     if m.Text == "" {
       continue
     }
     words := MessageToWords(m, true, true)
     totalClout += GetClout(words)
+    totalTone += GetTone(words)
     for _, w := range words {
       if w == "" {
         continue
@@ -65,6 +68,7 @@ func GetWordStats(messages []Message) (ws WordStats) {
   }
   ws.AvgLength = float64(totalLength) / float64(ws.TotalWords)
   ws.AvgCloutPerMsg = float64(totalClout) / float64(ws.TotalWords)
+  ws.AvgTonePerMsg = float64(totalTone) / float64(ws.TotalWords)
   return
 }
 
@@ -115,23 +119,26 @@ func GetTopWords(wordCounts []WordCount, amount int, includeCommon bool) (topWor
 func GetClout(words []string) (clout int) {
   for _, w := range words {
     wLower := strings.ToLower(w)
-    for _, iWord := range IWords {
-      if wLower == iWord {
-        clout -= 1
-        break
-      }
+    if inList(wLower, IWords) {
+      clout -= 1
+      continue
     }
-    for _, youWord := range YouWords {
-      if wLower == youWord {
-        clout += 1
-        break
-      }
+    if inList(wLower, YouWords) || inList(wLower, WeWords) {
+      clout += 1
     }
-    for _, weWord := range WeWords {
-      if wLower == weWord {
-        clout += 1
-        break
-      }
+  }
+  return
+}
+
+func GetTone(words []string) (tone int) {
+  for _, w := range words {
+    wLower := strings.ToLower(w)
+    if inList(wLower, PosEmo) {
+      tone += 1
+      continue
+    }
+    if inList(wLower, NegEmo) {
+      tone -= 1
     }
   }
   return
@@ -142,9 +149,23 @@ func GetAndPrintStats(messages []Message) {
   wordCounts := GetSortedWords(ws)
   topWords := GetTopWords(wordCounts, 10, false)
   fmt.Println("Total words: " + strconv.Itoa(ws.TotalWords))
-  fmt.Println("Avg word length: " + strconv.FormatFloat(ws.AvgLength, 'f', 3, 64))
-  fmt.Println("Avg message clout: " + strconv.FormatFloat(ws.AvgCloutPerMsg, 'f', 3, 64))
+  fmt.Println("Avg word length: " + floatStr(ws.AvgLength, 4))
+  fmt.Println("Avg message clout: " + floatStr(ws.AvgCloutPerMsg, 4))
+  fmt.Println("Avg message tone: " + floatStr(ws.AvgTonePerMsg, 4))
   for _, wc := range topWords {
     fmt.Println(wc.Word + " " + strconv.Itoa(wc.Count))
   }
+}
+
+func inList(word string, words []string) bool {
+  for _, w := range words {
+    if w == word {
+      return true
+    }
+  }
+  return false
+}
+
+func floatStr(f float64, decimals int) string {
+  return strconv.FormatFloat(f, 'f', decimals, 64)
 }
