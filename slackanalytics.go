@@ -8,11 +8,13 @@ import (
 )
 
 type WordStats struct {
-  TotalWords     int
-  AvgLength      float64
-  AvgCloutPerMsg float64
-  AvgTonePerMsg  float64
-  WordCountMap   map[string]int
+  TotalWords        int
+  AvgLength         float64
+  AvgWordsPerMsg    float64
+  AvgCloutPerMsg    float64
+  AvgTonePerMsg     float64
+  AvgAnalyticPerMsg float64
+  WordCountMap      map[string]int
 }
 
 type WordCount struct {
@@ -37,10 +39,19 @@ func (s sortByCount) Swap(i, j int) {
 // GetWordStats takes in a slice of messages and calculates
 // the total # of words, avg word length, and frequency counts.
 func GetWordStats(messages []Message) (ws WordStats) {
-  ws = WordStats{0, 0, 0, 0, make(map[string]int)}
+  ws = WordStats{
+    TotalWords:        0,
+    AvgLength:         0,
+    AvgWordsPerMsg:    0,
+    AvgCloutPerMsg:    0,
+    AvgTonePerMsg:     0,
+    AvgAnalyticPerMsg: 0,
+    WordCountMap:      make(map[string]int),
+  }
   totalLength := 0
   totalClout := 0
   totalTone := 0
+  totalAnalytic := 0
   for _, m := range messages {
     if m.Text == "" {
       continue
@@ -48,6 +59,7 @@ func GetWordStats(messages []Message) (ws WordStats) {
     words := MessageToWords(m, true, true)
     totalClout += GetClout(words)
     totalTone += GetTone(words)
+    totalAnalytic += GetAnalytic(words)
     for _, w := range words {
       if w == "" {
         continue
@@ -63,8 +75,10 @@ func GetWordStats(messages []Message) (ws WordStats) {
     }
   }
   ws.AvgLength = float64(totalLength) / float64(ws.TotalWords)
+  ws.AvgWordsPerMsg = float64(ws.TotalWords) / float64(len(messages))
   ws.AvgCloutPerMsg = float64(totalClout) / float64(ws.TotalWords)
   ws.AvgTonePerMsg = float64(totalTone) / float64(ws.TotalWords)
+  ws.AvgAnalyticPerMsg = float64(totalAnalytic) / float64(ws.TotalWords)
   return
 }
 
@@ -142,16 +156,34 @@ func GetTone(words []string) (tone int) {
   return
 }
 
+func GetAnalytic(words []string) (analytic int) {
+  analytic = 30
+  for _, w := range words {
+    w = strings.ToLower(w)
+    if inList(w, Articles) || inList(w, Prepositions) {
+      analytic += 1
+      continue
+    }
+    if inList(w, PersonalPronouns) || inList(w, ImpersonalPronouns) || inList(w, AuxiliaryVerbs) || inList(w, Conjunctions) || inList(w, Adverbs) || inList(w, Negations) {
+      analytic -= 1
+      continue
+    }
+  }
+  return
+}
+
 // GetAndPrintStats takes in a slice of messages
 // and prints some stats about them
 func GetAndPrintStats(messages []Message) {
   ws := GetWordStats(messages)
   wordCounts := GetSortedWords(ws)
-  topWords := GetTopWords(wordCounts, 10, false)
+  topWords := GetTopWords(wordCounts, 0, false)
   fmt.Println("Total words: " + strconv.Itoa(ws.TotalWords))
   fmt.Println("Avg word length: " + floatStr(ws.AvgLength, 4))
+  fmt.Println("Avg words per message: " + floatStr(ws.AvgWordsPerMsg, 4))
   fmt.Println("Avg message clout: " + floatStr(ws.AvgCloutPerMsg, 4))
   fmt.Println("Avg message tone: " + floatStr(ws.AvgTonePerMsg, 4))
+  fmt.Println("Avg message analytic: " + floatStr(ws.AvgAnalyticPerMsg, 4))
   for _, wc := range topWords {
     fmt.Println(wc.Word + " " + strconv.Itoa(wc.Count))
   }
