@@ -75,14 +75,15 @@ func GetWordStats(messages []Message) (ws WordStats) {
         ws.WordCountMap[w] = count + 1
       }
     }
-    counts := GetCategoryCounts(words)
-    // merge counts
-    for k, v := range counts {
-      count, ok := ws.CategoryCounts[k]
+  }
+  for word, count := range ws.WordCountMap {
+    categories := GetCategories(word)
+    for _, cat := range categories {
+      c, ok := ws.CategoryCounts[cat]
       if ok {
-        ws.CategoryCounts[k] = count + v
+        ws.CategoryCounts[cat] = c + count
       } else {
-        ws.CategoryCounts[k] = v
+        ws.CategoryCounts[cat] = count
       }
     }
   }
@@ -184,18 +185,11 @@ func GetAnalytic(words []string) (analytic int) {
   return
 }
 
-func GetCategoryCounts(words []string) (counts map[string]int) {
-  counts = make(map[string]int)
-  for _, w := range words {
-    for k, v := range Categories {
-      if inList(w, v) {
-        count, ok := counts[k]
-        if ok {
-          counts[k] = count + 1
-        } else {
-          counts[k] = 1
-        }
-      }
+func GetCategories(word string) (categories []string) {
+  categories = []string{}
+  for cat, catWords := range Categories {
+    if inList(word, catWords) {
+      categories = append(categories, cat)
     }
   }
   return
