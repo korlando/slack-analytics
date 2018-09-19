@@ -15,6 +15,7 @@ type WordStats struct {
   AvgTonePerMsg     float64
   AvgAnalyticPerMsg float64
   WordCountMap      map[string]int
+  CategoryCounts    map[string]int
 }
 
 type WordCount struct {
@@ -47,6 +48,7 @@ func GetWordStats(messages []Message) (ws WordStats) {
     AvgTonePerMsg:     0,
     AvgAnalyticPerMsg: 0,
     WordCountMap:      make(map[string]int),
+    CategoryCounts:    make(map[string]int),
   }
   totalLength := 0
   totalClout := 0
@@ -71,6 +73,16 @@ func GetWordStats(messages []Message) (ws WordStats) {
         ws.WordCountMap[w] = 1
       } else {
         ws.WordCountMap[w] = count + 1
+      }
+    }
+    counts := GetCategoryCounts(words)
+    // merge counts
+    for k, v := range counts {
+      count, ok := ws.CategoryCounts[k]
+      if ok {
+        ws.CategoryCounts[k] = count + v
+      } else {
+        ws.CategoryCounts[k] = v
       }
     }
   }
@@ -172,6 +184,23 @@ func GetAnalytic(words []string) (analytic int) {
   return
 }
 
+func GetCategoryCounts(words []string) (counts map[string]int) {
+  counts = make(map[string]int)
+  for _, w := range words {
+    for k, v := range Categories {
+      if inList(w, v) {
+        count, ok := counts[k]
+        if ok {
+          counts[k] = count + 1
+        } else {
+          counts[k] = 1
+        }
+      }
+    }
+  }
+  return
+}
+
 // GetAndPrintStats takes in a slice of messages
 // and prints some stats about them
 func GetAndPrintStats(messages []Message) {
@@ -184,6 +213,8 @@ func GetAndPrintStats(messages []Message) {
   fmt.Println("Avg message clout: " + floatStr(ws.AvgCloutPerMsg, 4))
   fmt.Println("Avg message tone: " + floatStr(ws.AvgTonePerMsg, 4))
   fmt.Println("Avg message analytic: " + floatStr(ws.AvgAnalyticPerMsg, 4))
+  fmt.Println("Category counts:")
+  fmt.Println(ws.CategoryCounts)
   for _, wc := range topWords {
     fmt.Println(wc.Word + " " + strconv.Itoa(wc.Count))
   }
