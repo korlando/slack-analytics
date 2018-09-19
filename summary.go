@@ -1,5 +1,9 @@
 package slackanalytics
 
+import (
+  "sort"
+)
+
 var (
   IWords = []string{"i", "me", "mine", "my", "i'm", "im", "ikr"}
   YouWords = []string{"you", "your", "thou", "you're", "u"}
@@ -210,3 +214,9 @@ var (
     "musical": []string{"chord", "producer", "radio", "keyboard", "clarinet", "ballet", "harmonica", "glee", "instrument", "production", "rhythm", "piano", "songwriting", "string", "song", "songwriter", "band", "banjo", "artist", "audience", "saxophone", "acoustic", "gospel", "quartet", "auditorium", "concert", "turntable", "medley", "melody", "harp", "album", "chorus", "rehearse", "orchestra", "lyric", "violinist", "rendition", "solo", "bass", "compilation", "guitar", "tuner", "genre", "sing", "impromptu", "lyrical", "soundtrack", "drumming", "drum", "talented", "musically", "cd", "composer", "singing", "classical", "theme", "interlude", "gig", "hymn", "symphony", "music", "upbeat", "ballad", "melodic", "hum", "musician", "singer", "instrumental", "burlesque", "soprano", "vocal", "video", "duet", "performer", "classic", "soloist", "sax", "tenor", "violin", "trumpet", "mainstream", "dancing", "perform", "guitarist", "actor", "note", "freestyle", "drummer", "harmony", "performance", "pianist", "jamming", "composition", "reggae", "play", "jazz", "theatre", "collaboration", "flute", "rehearsal", "audition", "vocalist", "tune", "nirvana", "recital", "playing", "riff", "bassist", "audio", "musical"},
   }
 )
+
+func SortCategories() {
+  for _, catWords := range Categories {
+    sort.Strings(catWords)
+  }
+}

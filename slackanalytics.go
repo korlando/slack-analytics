@@ -40,6 +40,7 @@ func (s sortByCount) Swap(i, j int) {
 // GetWordStats takes in a slice of messages and calculates
 // the total # of words, avg word length, and frequency counts.
 func GetWordStats(messages []Message) (ws WordStats) {
+  SortCategories()
   ws = WordStats{
     TotalWords:        0,
     AvgLength:         0,
@@ -188,7 +189,7 @@ func GetAnalytic(words []string) (analytic int) {
 func GetCategories(word string) (categories []string) {
   categories = []string{}
   for cat, catWords := range Categories {
-    if inList(word, catWords) {
+    if inListBinary(word, catWords) {
       categories = append(categories, cat)
     }
   }
@@ -220,6 +221,24 @@ func inList(word string, words []string) bool {
   for _, w := range words {
     if w == word {
       return true
+    }
+  }
+  return false
+}
+
+func inListBinary(word string, words []string) bool {
+  i := 0
+  j := len(words) - 1
+  for i <= j {
+    k := (i + j) / 2
+    w := words[k]
+    if word == w {
+      return true
+    }
+    if word < w {
+      j = k - 1
+    } else if word > w {
+      i = k + 1
     }
   }
   return false
