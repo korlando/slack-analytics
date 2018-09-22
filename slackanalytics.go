@@ -7,6 +7,12 @@ import (
   "strings"
 )
 
+type SlackStats struct {
+  AllStats     *WordStats
+  UserStats    map[string]*WordStats
+  ChannelStats map[string]*WordStats
+}
+
 type WordStats struct {
   TotalWords        int
   AvgLength         float64
@@ -37,68 +43,98 @@ func (s sortByCount) Swap(i, j int) {
   s[i], s[j] = s[j], s[i]
 }
 
-// GetWordStats takes in a slice of messages and calculates
-// the total # of words, avg word length, and frequency counts.
-func GetWordStats(messages []Message) (ws WordStats) {
+// GetSlackStats takes in a slice of users and channels and calculates the
+// total # of words, avg word length, frequency counts, and sentiment analysis.
+func GetSlackStats(users []User, channels []Channel) (ss SlackStats) {
   SortCategories()
-  ws = WordStats{
-    TotalWords:        0,
-    AvgLength:         0,
-    AvgWordsPerMsg:    0,
-    AvgCloutPerMsg:    0,
-    AvgTonePerMsg:     0,
-    AvgAnalyticPerMsg: 0,
-    WordCountMap:      make(map[string]int),
-    CategoryCounts:    make(map[string]int),
+  ss = SlackStats{
+    AllStats:     newWordStats(),
+    UserStats:    make(map[string]*WordStats),
+    ChannelStats: make(map[string]*WordStats),
   }
-  totalLength := 0
-  totalClout := 0
-  totalTone := 0
-  totalAnalytic := 0
-  for _, m := range messages {
-    if m.Text == "" {
-      continue
-    }
-    words := MessageToWords(m, true, true)
-    totalClout += GetClout(words)
-    totalTone += GetTone(words)
-    totalAnalytic += GetAnalytic(words)
-    for _, w := range words {
-      if w == "" {
+  // init user stats
+  for _, u := range users {
+    ss.UserStats[u.Id] = newWordStats()
+  }
+  // init channel stats
+  for _, c := range channels {
+    ss.ChannelStats[c.Id] = newWordStats()
+  }
+  var words []string
+  var clout float64
+  var tone float64
+  var analytic float64
+  for _, c := range channels {
+    for _, m := range c.Messages {
+      if m.Text == "" {
         continue
       }
-      ws.TotalWords += 1
-      totalLength += len(w)
-      count, ok := ws.WordCountMap[w]
-      if !ok {
-        ws.WordCountMap[w] = 1
-      } else {
-        ws.WordCountMap[w] = count + 1
+      words = MessageToWords(m, true, true)
+      clout = float64(GetClout(words))
+      tone = float64(GetTone(words))
+      analytic = float64(GetAnalytic(words))
+      ss.AllStats.AvgWordsPerMsg += 1
+      ss.AllStats.AvgCloutPerMsg += clout
+      ss.AllStats.AvgTonePerMsg += tone
+      ss.AllStats.AvgAnalyticPerMsg += analytic
+      userStats, userOk := ss.UserStats[m.User]
+      if userOk {
+        userStats.AvgWordsPerMsg += 1
+        userStats.AvgCloutPerMsg += clout
+        userStats.AvgTonePerMsg += tone
+        userStats.AvgAnalyticPerMsg += analytic
+      }
+      channelStats, channelOk := ss.ChannelStats[c.Name]
+      if channelOk {
+        channelStats.AvgWordsPerMsg += 1
+        channelStats.AvgCloutPerMsg += clout
+        channelStats.AvgTonePerMsg += tone
+        channelStats.AvgAnalyticPerMsg += analytic
+      }
+      for _, w := range words {
+        if w == "" {
+          continue
+        }
+        l := float64(len(w))
+        ss.AllStats.TotalWords += 1
+        ss.AllStats.AvgLength += l
+        updateWordCountMap(w, &ss.AllStats.WordCountMap)
+        if userOk {
+          userStats.TotalWords += 1
+          userStats.AvgLength += l
+          updateWordCountMap(w, &userStats.WordCountMap)
+        }
+        if channelOk {
+          channelStats.TotalWords += 1
+          channelStats.AvgLength += l
+          updateWordCountMap(w, &channelStats.WordCountMap)
+        }
       }
     }
   }
-  for word, count := range ws.WordCountMap {
-    categories := GetCategories(word)
-    for _, cat := range categories {
-      c, ok := ws.CategoryCounts[cat]
-      if ok {
-        ws.CategoryCounts[cat] = c + count
-      } else {
-        ws.CategoryCounts[cat] = count
-      }
+  wordCategoriesCache := make(map[string][]string)
+  populateCategoryCounts(ss.AllStats, &wordCategoriesCache)
+  setAverages(ss.AllStats)
+  for _, ws := range ss.UserStats {
+    if ws.TotalWords == 0 {
+      continue
     }
+    populateCategoryCounts(ws, &wordCategoriesCache)
+    setAverages(ws)
   }
-  ws.AvgLength = float64(totalLength) / float64(ws.TotalWords)
-  ws.AvgWordsPerMsg = float64(ws.TotalWords) / float64(len(messages))
-  ws.AvgCloutPerMsg = float64(totalClout) / float64(ws.TotalWords)
-  ws.AvgTonePerMsg = float64(totalTone) / float64(ws.TotalWords)
-  ws.AvgAnalyticPerMsg = float64(totalAnalytic) / float64(ws.TotalWords)
+  for _, ws := range ss.ChannelStats {
+    if ws.TotalWords == 0 {
+      continue
+    }
+    populateCategoryCounts(ws, &wordCategoriesCache)
+    setAverages(ws)
+  }
   return
 }
 
 // GetSortedWords takes in word stats and returns
 // sorted word counts by frequency descending.
-func GetSortedWords(ws WordStats) (wordCounts []WordCount) {
+func GetSortedWords(ws *WordStats) (wordCounts []WordCount) {
   wordCounts = make([]WordCount, len(ws.WordCountMap))
   i := 0
   for word, count := range ws.WordCountMap {
@@ -170,6 +206,9 @@ func GetTone(words []string) (tone int) {
   return
 }
 
+// GetAnalytic loosely calculates the analytical thinking
+// of a slice of words (+1 for article, prep and -1 for
+// ppron, ipron, auxverb, conj, adverb, negation)
 func GetAnalytic(words []string) (analytic int) {
   analytic = 30
   for _, w := range words {
@@ -196,23 +235,44 @@ func GetCategories(word string) (categories []string) {
   return
 }
 
-// GetAndPrintStats takes in a slice of messages
-// and prints some stats about them
-func GetAndPrintStats(messages []Message) {
-  ws := GetWordStats(messages)
-  wordCounts := GetSortedWords(ws)
+// GetAndPrintStats takes in a slice of users and
+// slice of channels, and prints some stats about them
+func GetAndPrintStats(users []User, channels []Channel) {
+  ss := GetSlackStats(users, channels)
+  wordCounts := GetSortedWords(ss.AllStats)
   topWords := GetTopWords(wordCounts, 0, false)
+  printStats(ss.AllStats)
+  fmt.Println("Category counts:")
+  fmt.Println(ss.AllStats.CategoryCounts)
+  fmt.Println()
+  for _, wc := range topWords {
+    fmt.Println(wc.Word + " " + strconv.Itoa(wc.Count))
+  }
+  for _, u := range users {
+    if u.Deleted {
+      continue
+    }
+    ws, ok := ss.UserStats[u.Id]
+    if !ok || ws.TotalWords == 0 {
+      continue
+    }
+    name := u.Profile.RealName
+    if u.Profile.DisplayName != "" {
+      name = u.Profile.DisplayName
+    }
+    fmt.Println(name + "\n")
+    printStats(ws)
+    fmt.Println()
+  }
+}
+
+func printStats(ws *WordStats) {
   fmt.Println("Total words: " + strconv.Itoa(ws.TotalWords))
   fmt.Println("Avg word length: " + floatStr(ws.AvgLength, 4))
   fmt.Println("Avg words per message: " + floatStr(ws.AvgWordsPerMsg, 4))
   fmt.Println("Avg message clout: " + floatStr(ws.AvgCloutPerMsg, 4))
   fmt.Println("Avg message tone: " + floatStr(ws.AvgTonePerMsg, 4))
   fmt.Println("Avg message analytic: " + floatStr(ws.AvgAnalyticPerMsg, 4))
-  fmt.Println("Category counts:")
-  fmt.Println(ws.CategoryCounts)
-  for _, wc := range topWords {
-    fmt.Println(wc.Word + " " + strconv.Itoa(wc.Count))
-  }
 }
 
 // inList determines whether a word
@@ -226,6 +286,8 @@ func inList(word string, words []string) bool {
   return false
 }
 
+// inListBinary determines whether a word is contained in a slice
+// of words using binary search (assumes words is sorted)
 func inListBinary(word string, words []string) bool {
   i := 0
   j := len(words) - 1
@@ -248,4 +310,53 @@ func inListBinary(word string, words []string) bool {
 // with decimals worth of precision
 func floatStr(f float64, decimals int) string {
   return strconv.FormatFloat(f, 'f', decimals, 64)
+}
+
+func newWordStats() *WordStats {
+  return &WordStats{
+    TotalWords:        0,
+    AvgLength:         0,
+    AvgWordsPerMsg:    0,
+    AvgCloutPerMsg:    0,
+    AvgTonePerMsg:     0,
+    AvgAnalyticPerMsg: 0,
+    WordCountMap:      make(map[string]int),
+    CategoryCounts:    make(map[string]int),
+  }
+}
+
+func updateWordCountMap(w string, wcm *map[string]int) {
+  count, ok := (*wcm)[w]
+  if !ok {
+    (*wcm)[w] = 1
+  } else {
+    (*wcm)[w] = count + 1
+  }
+}
+
+func populateCategoryCounts(ws *WordStats, wordCategoriesCache *map[string][]string) {
+  for word, count := range (*ws).WordCountMap {
+    categories, hit := (*wordCategoriesCache)[word]
+    if !hit {
+      categories = GetCategories(word)
+      (*wordCategoriesCache)[word] = categories
+    }
+    for _, cat := range categories {
+      c, ok := (*ws).CategoryCounts[cat]
+      if ok {
+        (*ws).CategoryCounts[cat] = c + count
+      } else {
+        (*ws).CategoryCounts[cat] = count
+      }
+    }
+  }
+}
+
+func setAverages(ws *WordStats) {
+  total := float64(ws.TotalWords)
+  ws.AvgLength /= total
+  ws.AvgWordsPerMsg = float64(ws.TotalWords) / ws.AvgWordsPerMsg
+  ws.AvgCloutPerMsg /= total
+  ws.AvgTonePerMsg /= total
+  ws.AvgAnalyticPerMsg /= total
 }
