@@ -15,7 +15,8 @@ type SlackStats struct {
 
 type WordStats struct {
   TotalWords        int
-  AvgLength         float64
+  TotalMessages     int
+  AvgWordLength     float64
   AvgWordsPerMsg    float64
   AvgCloutPerMsg    float64
   AvgTonePerMsg     float64
@@ -45,7 +46,7 @@ func (s sortByCount) Swap(i, j int) {
 
 // GetSlackStats takes in a slice of users and channels and calculates the
 // total # of words, avg word length, frequency counts, and sentiment analysis.
-func GetSlackStats(users []User, channels []Channel) (ss SlackStats) {
+func GetSlackStats(users []*User, channels []*Channel) (ss SlackStats) {
   SortCategories()
   ss = SlackStats{
     AllStats:     newWordStats(),
@@ -73,20 +74,20 @@ func GetSlackStats(users []User, channels []Channel) (ss SlackStats) {
       clout = float64(GetClout(words))
       tone = float64(GetTone(words))
       analytic = float64(GetAnalytic(words))
-      ss.AllStats.AvgWordsPerMsg += 1
+      ss.AllStats.TotalMessages += 1
       ss.AllStats.AvgCloutPerMsg += clout
       ss.AllStats.AvgTonePerMsg += tone
       ss.AllStats.AvgAnalyticPerMsg += analytic
       userStats, userOk := ss.UserStats[m.User]
       if userOk {
-        userStats.AvgWordsPerMsg += 1
+        userStats.TotalMessages += 1
         userStats.AvgCloutPerMsg += clout
         userStats.AvgTonePerMsg += tone
         userStats.AvgAnalyticPerMsg += analytic
       }
       channelStats, channelOk := ss.ChannelStats[c.Name]
       if channelOk {
-        channelStats.AvgWordsPerMsg += 1
+        channelStats.TotalMessages += 1
         channelStats.AvgCloutPerMsg += clout
         channelStats.AvgTonePerMsg += tone
         channelStats.AvgAnalyticPerMsg += analytic
@@ -97,16 +98,16 @@ func GetSlackStats(users []User, channels []Channel) (ss SlackStats) {
         }
         l := float64(len(w))
         ss.AllStats.TotalWords += 1
-        ss.AllStats.AvgLength += l
+        ss.AllStats.AvgWordLength += l
         updateWordCountMap(w, &ss.AllStats.WordCountMap)
         if userOk {
           userStats.TotalWords += 1
-          userStats.AvgLength += l
+          userStats.AvgWordLength += l
           updateWordCountMap(w, &userStats.WordCountMap)
         }
         if channelOk {
           channelStats.TotalWords += 1
-          channelStats.AvgLength += l
+          channelStats.AvgWordLength += l
           updateWordCountMap(w, &channelStats.WordCountMap)
         }
       }
@@ -237,7 +238,7 @@ func GetCategories(word string) (categories []string) {
 
 // GetAndPrintStats takes in a slice of users and
 // slice of channels, and prints some stats about them
-func GetAndPrintStats(users []User, channels []Channel) {
+func GetAndPrintStats(users []*User, channels []*Channel) {
   ss := GetSlackStats(users, channels)
   wordCounts := GetSortedWords(ss.AllStats)
   topWords := GetTopWords(wordCounts, 0, false)
@@ -268,7 +269,8 @@ func GetAndPrintStats(users []User, channels []Channel) {
 
 func printStats(ws *WordStats) {
   fmt.Println("Total words: " + strconv.Itoa(ws.TotalWords))
-  fmt.Println("Avg word length: " + floatStr(ws.AvgLength, 4))
+  fmt.Println("Total messages: " + strconv.Itoa(ws.TotalMessages))
+  fmt.Println("Avg word length: " + floatStr(ws.AvgWordLength, 4))
   fmt.Println("Avg words per message: " + floatStr(ws.AvgWordsPerMsg, 4))
   fmt.Println("Avg message clout: " + floatStr(ws.AvgCloutPerMsg, 4))
   fmt.Println("Avg message tone: " + floatStr(ws.AvgTonePerMsg, 4))
@@ -315,7 +317,8 @@ func floatStr(f float64, decimals int) string {
 func newWordStats() *WordStats {
   return &WordStats{
     TotalWords:        0,
-    AvgLength:         0,
+    TotalMessages:     0,
+    AvgWordLength:     0,
     AvgWordsPerMsg:    0,
     AvgCloutPerMsg:    0,
     AvgTonePerMsg:     0,
@@ -353,10 +356,11 @@ func populateCategoryCounts(ws *WordStats, wordCategoriesCache *map[string][]str
 }
 
 func setAverages(ws *WordStats) {
-  total := float64(ws.TotalWords)
-  ws.AvgLength /= total
-  ws.AvgWordsPerMsg = float64(ws.TotalWords) / ws.AvgWordsPerMsg
-  ws.AvgCloutPerMsg /= total
-  ws.AvgTonePerMsg /= total
-  ws.AvgAnalyticPerMsg /= total
+  totalWords := float64(ws.TotalWords)
+  totalMessages := float64(ws.TotalMessages)
+  ws.AvgWordLength /= totalWords
+  ws.AvgWordsPerMsg = totalWords / totalMessages
+  ws.AvgCloutPerMsg /= totalMessages
+  ws.AvgTonePerMsg /= totalMessages
+  ws.AvgAnalyticPerMsg /= totalMessages
 }

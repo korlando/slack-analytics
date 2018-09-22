@@ -58,7 +58,7 @@ type Profile struct {
   IsCustomImage         bool     `json:"is_custom_image"`
 }
 
-func GetUsers(dataPath string) (users []User, err error) {
+func GetUsers(dataPath string) (users []*User, err error) {
   file, err := os.Open(dataPath + "/users.json")
   if err != nil {
     return

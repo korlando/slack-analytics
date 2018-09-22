@@ -34,7 +34,7 @@ type ChannelTopic struct {
   LastSet string `json:"last_set"`
 }
 
-func GetChannels(dataPath string) (channels []Channel, err error) {
+func GetChannels(dataPath string) (channels []*Channel, err error) {
   file, err := os.Open(dataPath + "/channels.json")
   if err != nil {
     return
@@ -47,10 +47,10 @@ func GetChannels(dataPath string) (channels []Channel, err error) {
   if err != nil {
     return
   }
-  // populate channels with message
-  for i, c := range channels {
+  // populate channels with messages
+  for _, c := range channels {
     messages, _ := ReadChannelMessages(dataPath + "/" + c.Name)
-    channels[i].Messages = messages
+    c.Messages = messages
   }
   return
 }
