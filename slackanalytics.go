@@ -14,6 +14,7 @@ type SlackStats struct {
 }
 
 type WordStats struct {
+  TotalTextLength   int
   TotalWords        int
   TotalMessages     int
   AvgWordLength     float64
@@ -74,12 +75,14 @@ func GetSlackStats(users []*User, channels []*Channel) (ss SlackStats) {
       clout = float64(GetClout(words))
       tone = float64(GetTone(words))
       analytic = float64(GetAnalytic(words))
+      ss.AllStats.TotalTextLength += len(m.Text)
       ss.AllStats.TotalMessages += 1
       ss.AllStats.AvgCloutPerMsg += clout
       ss.AllStats.AvgTonePerMsg += tone
       ss.AllStats.AvgAnalyticPerMsg += analytic
       userStats, userOk := ss.UserStats[m.User]
       if userOk {
+        userStats.TotalTextLength += len(m.Text)
         userStats.TotalMessages += 1
         userStats.AvgCloutPerMsg += clout
         userStats.AvgTonePerMsg += tone
@@ -87,6 +90,7 @@ func GetSlackStats(users []*User, channels []*Channel) (ss SlackStats) {
       }
       channelStats, channelOk := ss.ChannelStats[c.Name]
       if channelOk {
+        channelStats.TotalTextLength += len(m.Text)
         channelStats.TotalMessages += 1
         channelStats.AvgCloutPerMsg += clout
         channelStats.AvgTonePerMsg += tone
@@ -268,6 +272,7 @@ func GetAndPrintStats(users []*User, channels []*Channel) {
 }
 
 func printStats(ws *WordStats) {
+  fmt.Println("Total text length: " + strconv.Itoa(ws.TotalTextLength))
   fmt.Println("Total words: " + strconv.Itoa(ws.TotalWords))
   fmt.Println("Total messages: " + strconv.Itoa(ws.TotalMessages))
   fmt.Println("Avg word length: " + floatStr(ws.AvgWordLength, 4))
@@ -316,6 +321,7 @@ func floatStr(f float64, decimals int) string {
 
 func newWordStats() *WordStats {
   return &WordStats{
+    TotalTextLength:   0,
     TotalWords:        0,
     TotalMessages:     0,
     AvgWordLength:     0,
