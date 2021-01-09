@@ -1,45 +1,59 @@
 package main
 
 import (
-  "flag"
-  "log"
+	"flag"
+	"log"
 
-  sa "github.com/korlando/slackanalytics"
+	sa "github.com/korlando/slackanalytics"
 )
 
 const (
-  dataPath = "../data"
+	dataPath = "../data"
 )
 
 type Options struct {
-  path string
+	path    string
+	msgFile bool
 }
 
 func parseFlags() (opt Options) {
-  var p, path string
-  pDefault := dataPath
-  pDesc := "Path to the data folder."
-  flag.StringVar(&p, "p", pDefault, pDesc)
-  flag.StringVar(&path, "path", pDefault, pDesc)
-  flag.Parse()
-  opt = Options{
-    path: p,
-  }
-  if path != pDefault {
-    opt.path = path
-  }
-  return
+	var p, path string
+	// m is true if the path points to a JSON file containing
+	// messages alone, vs. a folder with a Slack dump
+	var m bool
+	pDefault := dataPath
+	pDesc := "Path to the data folder."
+	flag.StringVar(&p, "p", pDefault, pDesc)
+	flag.StringVar(&path, "path", pDefault, pDesc)
+	flag.BoolVar(&m, "m", false, "Path points to a JSON file containing a messages array.")
+	flag.Parse()
+	opt = Options{
+		path:    p,
+		msgFile: m,
+	}
+	if path != pDefault {
+		opt.path = path
+	}
+	return
 }
 
 func main() {
-  opt := parseFlags()
-  users, err := sa.GetUsers(opt.path)
-  if err != nil {
-    log.Fatal(err)
-  }
-  channels, err := sa.GetChannels(opt.path)
-  if err != nil {
-    log.Fatal(err)
-  }
-  sa.GetAndPrintStats(users, channels)
+	opt := parseFlags()
+	if opt.msgFile {
+		messages, err := sa.ReadMessagesFromFile(opt.path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		sa.ExportMessageAnalysis(messages)
+		return
+	}
+	users, err := sa.GetUsers(opt.path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	channels, err := sa.GetChannels(opt.path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sa.GetAndPrintStats(users, channels)
 }
