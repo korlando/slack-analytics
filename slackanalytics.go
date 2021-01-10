@@ -15,6 +15,7 @@ type SlackStats struct {
 }
 
 type SlackMessageStats struct {
+	Time         int
 	AllStats     *MessageStats
 	UserStats    map[string]*MessageStats
 	DailyStats   map[string]*MessageStats
@@ -300,6 +301,7 @@ func GetAndPrintStats(users []*User, channels []*Channel) {
 func AnalyzeMessages(messages []Message) (s SlackMessageStats) {
 	SortCategories()
 	s = SlackMessageStats{
+		Time:         int(time.Now().Unix()),
 		AllStats:     newMessageStats(),
 		UserStats:    make(map[string]*MessageStats),
 		DailyStats:   make(map[string]*MessageStats),
@@ -316,23 +318,27 @@ func AnalyzeMessages(messages []Message) (s SlackMessageStats) {
 		if m.Text == "" {
 			continue
 		}
-		t, err := strconv.ParseInt(m.TimeStamp, 10, 64)
+		var t int64
+		t64, err := strconv.ParseFloat(m.TimeStamp, 64)
 		if err != nil {
 			t = time.Now().Unix()
+		} else {
+			t = int64(t64)
 		}
 		tm := time.Unix(t, 0)
 		d := tm.Format("2006-01-02")
 		mo := tm.Format("2006-01")
 		u := m.User
 
-		words = MessageToWords(m, true, false)
-		emojis = GetEmojis(words)
+		words, emojis = ParseWords(m, false)
 		clout = float64(GetClout(words))
 		tone = float64(GetTone(words))
 		analytic = float64(GetAnalytic(words))
 
 		s.AllStats.TotalTextLength += len(m.Text)
 		s.AllStats.NumMessages += 1
+		s.AllStats.NumWords += len(words)
+		s.AllStats.NumEmojis += len(emojis)
 		s.AllStats.AvgCloutPerMsg += clout
 		s.AllStats.AvgTonePerMsg += tone
 		s.AllStats.AvgAnalyticPerMsg += analytic
@@ -355,18 +361,24 @@ func AnalyzeMessages(messages []Message) (s SlackMessageStats) {
 
 		userStats.TotalTextLength += len(m.Text)
 		userStats.NumMessages += 1
+		userStats.NumWords += len(words)
+		userStats.NumEmojis += len(emojis)
 		userStats.AvgCloutPerMsg += clout
 		userStats.AvgTonePerMsg += tone
 		userStats.AvgAnalyticPerMsg += analytic
 
 		dailyStats.TotalTextLength += len(m.Text)
 		dailyStats.NumMessages += 1
+		dailyStats.NumWords += len(words)
+		dailyStats.NumEmojis += len(emojis)
 		dailyStats.AvgCloutPerMsg += clout
 		dailyStats.AvgTonePerMsg += tone
 		dailyStats.AvgAnalyticPerMsg += analytic
 
 		monthlyStats.TotalTextLength += len(m.Text)
 		monthlyStats.NumMessages += 1
+		monthlyStats.NumWords += len(words)
+		monthlyStats.NumEmojis += len(emojis)
 		monthlyStats.AvgCloutPerMsg += clout
 		monthlyStats.AvgTonePerMsg += tone
 		monthlyStats.AvgAnalyticPerMsg += analytic
@@ -376,19 +388,15 @@ func AnalyzeMessages(messages []Message) (s SlackMessageStats) {
 				continue
 			}
 			l := float64(len(w))
-			s.AllStats.NumWords += 1
 			s.AllStats.AvgWordLength += l
 			updateWordCountMap(w, &s.AllStats.WordCountMap)
 
-			userStats.NumWords += 1
 			userStats.AvgWordLength += l
 			updateWordCountMap(w, &userStats.WordCountMap)
 
-			dailyStats.NumWords += 1
 			dailyStats.AvgWordLength += l
 			updateWordCountMap(w, &dailyStats.WordCountMap)
 
-			monthlyStats.NumWords += 1
 			monthlyStats.AvgWordLength += l
 			updateWordCountMap(w, &monthlyStats.WordCountMap)
 		}
@@ -397,16 +405,9 @@ func AnalyzeMessages(messages []Message) (s SlackMessageStats) {
 			if e == "" {
 				continue
 			}
-			s.AllStats.NumEmojis += 1
 			updateWordCountMap(e, &s.AllStats.EmojiCountMap)
-
-			userStats.NumEmojis += 1
 			updateWordCountMap(e, &userStats.EmojiCountMap)
-
-			dailyStats.NumEmojis += 1
 			updateWordCountMap(e, &dailyStats.EmojiCountMap)
-
-			monthlyStats.NumEmojis += 1
 			updateWordCountMap(e, &monthlyStats.EmojiCountMap)
 		}
 	}

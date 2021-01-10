@@ -135,17 +135,18 @@ func MessageToWords(m Message, trimSymbols, lower bool) (words []string) {
 }
 
 func ParseWords(m Message, lower bool) (words []string, emojis []string) {
-	pieces := strings.Fields(m.Text)
-	r, _ := regexp.Compile("^:[-_a-zA-Z0-9]+:$")
+	// extract all emojis and replace them with spaces
+	r, _ := regexp.Compile(":[-_a-zA-Z0-9]+:")
+	text := r.ReplaceAllStringFunc(m.Text, func(s string) string {
+		emojis = append(emojis, s)
+		return " "
+	})
+	pieces := strings.Fields(text)
 	for _, p := range pieces {
 		if lower {
 			p = strings.ToLower(p)
 		}
-		if r.MatchString(p) {
-			emojis = append(emojis, p)
-		} else {
-			words = append(words, p)
-		}
+		words = append(words, p)
 	}
 	return
 }

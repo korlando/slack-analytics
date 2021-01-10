@@ -10,5 +10,5 @@ import (
 func ExportSlackMessageStats(s SlackMessageStats) {
 	file, _ := json.MarshalIndent(s, "", "	")
 	now := time.Now().Unix()
-	_ = ioutil.WriteFile(strconv.FormatInt(now, 10)+".json", file, 0644)
+	_ = ioutil.WriteFile("./dashboard/"+strconv.FormatInt(now, 10)+".json", file, 0644)
 }
